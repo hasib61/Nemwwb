@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="siteTitle">User Panel</title>
+  <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', monospace; }
+    body { background: #000; color: #00ff00; display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; position: relative; }
+    
+    #particles-js { position: absolute; width: 100%; height: 100%; z-index: -1; }
+    
+    .container { width: 90%; max-width: 700px; padding: 40px; text-align: center; background: rgba(0, 0, 0, 0.8); border-radius: 12px; border: 2px solid #00ff00; box-shadow: 0 0 15px #00ff00; margin-top: 30px; position: relative; z-index: 2; }
+    
+    .input-field, .button { width: 100%; padding: 12px; margin: 12px 0; border-radius: 5px; font-size: 18px; }
+    .input-field { border: 2px solid #00ff00; background: #000; color: #00ff00; text-align: center; }
+    .button { background: #00ff00; border: none; color: #000; cursor: pointer; font-weight: bold; transition: 0.3s; }
+    .button:disabled { background: #005500; cursor: not-allowed; }
+    .button:hover:not(:disabled) { background: #0f0; transform: scale(1.05); }
+
+    .result-box { background: rgba(0, 255, 0, 0.2); padding: 10px; border-radius: 8px; font-size: 20px; font-weight: bold; border: 2px solid #00ff00; box-shadow: 0 0 10px #00ff00; margin-top: 15px; transition: transform 0.5s ease-in-out, opacity 0.5s; }
+    .result-box.hidden { transform: scale(0); opacity: 0; }
+    
+    .log { font-size: 16px; margin-top: 5px; }
+    h2 { margin-bottom: 15px; font-size: 24px; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+
+  <div id="particles-js"></div>
+
+  <!-- Login Page -->
+  <div class="container" id="loginPage">
+    <h2>Login to Panel</h2>
+    <input type="text" class="input-field" id="uid" placeholder="Enter Your UID">
+    <button class="button" onclick="login()">Login</button>
+    <button class="button" onclick="showAdminLogin()">Admin Login</button>
+  </div>
+
+  <!-- User Dashboard -->
+  <div class="container" id="dashboard" style="display: none;">
+    <h2>User Panel</h2>
+    <div class="result-box hidden" id="resultBox">Result: <span id="currentResult">Waiting...</span></div>
+    <button class="button" id="startButton" onclick="startProcess()">START</button>
+    <button class="button" onclick="goBack()">Go Back</button>
+    <p class="log">Your UID: <span id="userUID"></span></p>
+  </div>
+
+  <!-- Admin Login -->
+  <div class="container" id="adminLogin" style="display: none;">
+    <h2>Admin Login</h2>
+    <input type="password" class="input-field" id="adminPass" placeholder="Enter Admin Password">
+    <button class="button" onclick="adminLogin()">Login</button>
+    <button class="button" onclick="goBack()">Cancel</button>
+  </div>
+
+  <!-- Admin Dashboard -->
+  <div class="container" id="adminDashboard" style="display: none;">
+    <h2>Admin Panel</h2>
+    
+    <label>Website Title:</label>
+    <input type="text" class="input-field" id="siteTitleInput">
+
+    <label>Set Result:</label>
+    <select class="input-field" id="adminResult">
+      <option value="auto">Auto (Random)</option>
+      <option value="BIG">BIG</option>
+      <option value="SMALL">SMALL</option>
+    </select>
+
+    <label>Telegram Notification:</label>
+    <select class="input-field" id="telegramToggle">
+      <option value="on">ON</option>
+      <option value="off">OFF</option>
+    </select>
+
+    <button class="button" onclick="saveSettings()">Save</button>
+    <button class="button" onclick="goBack()">Go Back</button>
+  </div>
+
+  <script>
+    // Particles effect for background
+    particlesJS("particles-js", { particles: { number: { value: 20 }, move: { speed: 0.5 } } });
+
+    // Admin Password & Telegram Bot Token
+    const ADMIN_PASSWORD = "hradmin13";
+    const TELEGRAM_BOT_TOKEN = "YOUR_BOT_TOKEN";  
+    const TELEGRAM_CHAT_ID = "YOUR_CHAT_ID";  
+
+    // Function to send Telegram Message
+    function sendTelegramMessage(message) {
+      fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message, parse_mode: "Markdown" })
+      });
+    }
+
+    // User Login Function
+    function login() {
+      let uid = document.getElementById("uid").value;
+      if (uid.length >= 6) {
+        document.getElementById("loginPage").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
+        document.getElementById("userUID").innerText = uid;
+
+        let telegramStatus = localStorage.getItem("telegramToggle") || "on";
+        if (telegramStatus === "on") {
+          sendTelegramMessage(`🔔 *New Login Detected!*\n👤 *User ID:* ${uid}\n✅ *Status:* Logged In`);
+        }
+      } else {
+        alert("Invalid UID!");
+      }
+    }
+
+    // Show Admin Login Page
+    function showAdminLogin() {
+      document.getElementById("loginPage").style.display = "none";
+      document.getElementById("adminLogin").style.display = "block";
+    }
+
+    // Admin Login Function
+    function adminLogin() {
+      let pass = document.getElementById("adminPass").value;
+      if (pass === ADMIN_PASSWORD) {
+        document.getElementById("adminLogin").style.display = "none";
+        document.getElementById("adminDashboard").style.display = "block";
+        loadSettings();
+      } else {
+        alert("Wrong Password!");
+      }
+    }
+
+    // Save Admin Settings
+    function saveSettings() {
+      let title = document.getElementById("siteTitleInput").value;
+      let result = document.getElementById("adminResult").value;
+      let telegram = document.getElementById("telegramToggle").value;
+
+      localStorage.setItem("siteTitle", title);
+      localStorage.setItem("adminResult", result);
+      localStorage.setItem("telegramToggle", telegram);
+
+      document.getElementById("siteTitle").innerText = title; // Update website title dynamically  
+      alert("Settings Updated!");
+    }
+
+    // Load Admin Settings
+    function loadSettings() {
+      document.getElementById("siteTitleInput").value = localStorage.getItem("siteTitle") || "User Panel";
+      document.getElementById("adminResult").value = localStorage.getItem("adminResult") || "auto";
+      document.getElementById("telegramToggle").value = localStorage.getItem("telegramToggle") || "on";
+    }
+
+    // Start Process Function
+    function startProcess() {
+      let resultBox = document.getElementById("resultBox");
+      let resultText = document.getElementById("currentResult");
+      let startButton = document.getElementById("startButton");
+
+      startButton.disabled = true;
+      resultBox.classList.add("hidden");
+
+      setTimeout(() => {
+        let adminResult = localStorage.getItem("adminResult") || "auto";
+        resultText.innerText = (adminResult === "auto") ? (Math.random() < 0.5 ? "BIG" : "SMALL") : adminResult;
+        resultBox.classList.remove("hidden");
+      }, 2000);
+
+      setTimeout(() => { startButton.disabled = false; }, 25000);
+    }
+
+    // Go Back Function
+    function goBack() { location.reload(); }
+  </script>
+
+</body>
+</html>
